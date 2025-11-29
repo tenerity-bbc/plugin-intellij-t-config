@@ -1,6 +1,26 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import javax.net.ssl.*
+import java.security.cert.X509Certificate
+import java.security.SecureRandom
+
+// Disable SSL verification for corporate environments with certificate issues
+// WARNING: This reduces security - only use in trusted environments
+try {
+    val trustAllManager = object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<X509Certificate>?, authType: String?) {}
+        override fun checkServerTrusted(chain: Array<X509Certificate>?, authType: String?) {}
+        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+    }
+    val sslContext = SSLContext.getInstance("TLS")
+    sslContext.init(null, arrayOf(trustAllManager), SecureRandom())
+    HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.socketFactory)
+    HttpsURLConnection.setDefaultHostnameVerifier { _, _ -> true }
+    println("SSL verification disabled (WARNING: This reduces security)")
+} catch (e: Exception) {
+    println("Warning: Could not disable SSL verification: ${e.message}")
+}
 
 plugins {
     id("java") // Java support
@@ -134,6 +154,7 @@ tasks {
     publishPlugin {
         dependsOn(patchChangelog)
     }
+
 }
 
 intellijPlatformTesting {
